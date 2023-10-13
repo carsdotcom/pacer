@@ -281,6 +281,7 @@ In your PRs please provide the following detailed information as you see fit, es
 
 1. What does your PR aim to do?
 2. The reason/why for the changes
-3. Additional commentary if necessary -- tradeoffs, background context, etc.
+3. Validation and verification instructions (how can we verify that your changes are working as expected; if possible please provide one or two code samples that demonstrate the behavior)
+4. Additional commentary if necessary -- tradeoffs, background context, etc.
 
 We will try to provide responses and feedback in a timely manner. Please feel free to ping us if you have a PR or issue that has not been responded to.
