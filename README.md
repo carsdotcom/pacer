@@ -262,3 +262,25 @@
 
   The order fields are defined in within a `graph` definition does not matter. For example, if you have a field `:request_one` that depends
   on another field `:request_two`, the fields can be declared in any order.
+
+
+## Contributing
+
+We welcome everyone to contribute to Pacer -- whether it is documentation updates, proposing and/or implementing new features, or contributing bugfixes. 
+
+Please feel free to create issues on the repo if you notice any bugs or if you would like to propose new features or implementations. 
+
+When contributing to the codebase, please:
+
+1. Run the test suite locally with `mix test`
+2. Verify Dialyzer still passes with `mix dialyzer`
+3. Run `mix credo --strict`
+4. Make sure your code has been formatted with `mix format`
+
+In your PRs please provide the following detailed information as you see fit, especially for larger proposed changes:
+
+1. What does your PR aim to do?
+2. The reason/why for the changes
+3. Additional commentary if necessary -- tradeoffs, background context, etc.
+
+We will try to provide responses and feedback in a timely manner. Please feel free to ping us if you have a PR or issue that has not been responded to.
