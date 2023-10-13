@@ -8,18 +8,19 @@ defmodule Pacer.MixProject do
   def project do
     [
       app: :pacer,
-      contributors: contributors(),
-      name: @name,
-      version: @version,
-      source_url: @source_url,
       build_path: "../../_build",
+      contributors: contributors(),
+      deps: deps(),
       deps_path: "../../deps",
-      lockfile: "../../mix.lock",
       description: description(),
-      package: package(),
+      docs: docs(),
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
-      deps: deps()
+      lockfile: "../../mix.lock",
+      name: @name,
+      source_url: @source_url,
+      package: package(),
+      version: @version
     ]
   end
 
@@ -41,6 +42,14 @@ defmodule Pacer.MixProject do
 
   defp description do
     "Dependency graphs for optimal function call ordering"
+  end
+
+  defp docs do
+    [
+      main: "Pacer.Workflow",
+      logo: __DIR__ <> "/assets/PACER.png",
+      extras: ["README.md"]
+    ]
   end
 
   defp package do
