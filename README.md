@@ -156,13 +156,13 @@
   same graph. You do this by providing a list of dependencies as atoms to the `field/2`
   macro:
 
-    ```elixir
-    graph do
-      field(:field_one)
-      field(:field_two)
-      field(:my_dependent_field, resolver: &MyResolver.resolve/1 dependencies: [:field_one, :field_two])
-    end
-    ```
+  ```elixir
+  graph do
+    field(:field_one)
+    field(:field_two)
+    field(:my_dependent_field, resolver: &MyResolver.resolve/1 dependencies: [:field_one, :field_two])
+  end
+  ```
 
   If the `:dependencies` option is not given, it defaults to an empty list and effectively means
   that the field has no dependencies. This may be the case when the value for the field meets one
@@ -176,11 +176,11 @@
 
   Additionally, fields may declare a default value by passing a default to the `:default` option key:
 
-    ```elixir
-    graph do
-      field(:my_field, default: 42)
-    end
-    ```
+  ```elixir
+  graph do
+    field(:my_field, default: 42)
+  end
+  ```
 
   ## Resolvers
 
@@ -190,20 +190,20 @@
 
   For example, for a graph definition that looks like this:
 
-    ```elixir
-    defmodule MyGraph do
-      use Pacer.Workflow
+  ```elixir
+  defmodule MyGraph do
+    use Pacer.Workflow
 
-      graph do
-        field(:field_one)
-        field(:dependent_field, resolver: &__MODULE__.resolve/1, dependencies: [:field_one])
-      end
-
-      def resolve(inputs) do
-        IO.inspect(inputs.field_one_value, label: "Received field_one's value")
-      end
+    graph do
+      field(:field_one)
+      field(:dependent_field, resolver: &__MODULE__.resolve/1, dependencies: [:field_one])
     end
-    ```
+
+    def resolve(inputs) do
+      IO.inspect(inputs.field_one, label: "Received field_one's value")
+    end
+  end
+  ```
 
   Resolver functions will always be called with a map that contains the values for fields declared as dependencies.
   In the above example, that means if we have a struct `%MyGraph{field_one: 42}`, the resolver will be invoked with
@@ -235,28 +235,28 @@
 
   Ex.:
 
-    ```elixir
-    defmodule MyGraphWithBatches do
-      use Pacer.Workflow
+  ```elixir
+  defmodule MyGraphWithBatches do
+    use Pacer.Workflow
 
-      graph do
-        field(:regular_field)
+    graph do
+      field(:regular_field)
 
-        batch :http_requests do
-          field(:request_one, resolver: &__MODULE__.resolve/1)
-          field(:request_two, resolver: &__MODULE__.resolve/1, dependencies: [:regular_field])
-        end
-
-        field(:another_field, resolver: &__MODULE__.simple_resolver/1, dependencies: [:request_two])
+      batch :http_requests do
+        field(:request_one, resolver: &__MODULE__.resolve/1)
+        field(:request_two, resolver: &__MODULE__.resolve/1, dependencies: [:regular_field])
       end
 
-      def resolve(_) do
-        IO.puts("Simulating HTTP request")
-      end
-
-      def simple_resolver(_), do: :ok
+      field(:another_field, resolver: &__MODULE__.simple_resolver/1, dependencies: [:request_two])
     end
-    ```
+
+    def resolve(_) do
+      IO.puts("Simulating HTTP request")
+    end
+
+    def simple_resolver(_), do: :ok
+  end
+  ```
 
   Notes:
 
