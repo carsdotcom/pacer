@@ -256,6 +256,18 @@ defmodule Pacer.WorkflowTest do
                some_options: "foo"
              }
     end
+
+    defmodule WorkflowWithNoConfigOptions do
+      use Pacer.Workflow
+
+      graph do
+        field(:foo)
+      end
+    end
+
+    test "returns nil for missing or non-existent config values" do
+      assert is_nil(WorkflowWithNoConfigOptions.__config__(:foo))
+    end
   end
 
   describe "graph validations" do
