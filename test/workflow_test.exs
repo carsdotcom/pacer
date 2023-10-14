@@ -242,6 +242,22 @@ defmodule Pacer.WorkflowTest do
     end
   end
 
+  describe "workflow config" do
+    defmodule WorkflowWithBatchOptions do
+      use Pacer.Workflow, batch_telemetry_options: %{some_options: "foo"}
+
+      graph do
+        field(:bar)
+      end
+    end
+
+    test "allows batch_telemetry_config option to be passed" do
+      assert WorkflowWithBatchOptions.__config__(:batch_telemetry_options) == %{
+               some_options: "foo"
+             }
+    end
+  end
+
   describe "graph validations" do
     test "options validations" do
       module = """
