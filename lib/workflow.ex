@@ -317,6 +317,10 @@ defmodule Pacer.Workflow do
         generate_docs?
       )
 
+      batch_telemetry_options = Keyword.get(unquote(opts), :batch_telemetry_options, %{})
+
+      Module.put_attribute(__MODULE__, :pacer_batch_telemetry_options, batch_telemetry_options)
+
       Module.register_attribute(__MODULE__, :pacer_docs, accumulate: true)
       Module.register_attribute(__MODULE__, :pacer_graph_vertices, accumulate: true)
       Module.register_attribute(__MODULE__, :pacer_field_to_batch_mapping, accumulate: false)
@@ -550,6 +554,9 @@ defmodule Pacer.Workflow do
           end)
 
         defstruct Enum.reverse(@pacer_struct_fields)
+
+        def __config__(:batch_telemetry_options), do: @pacer_batch_telemetry_options
+        def __config__(_), do: nil
 
         def __graph__(:fields), do: Enum.reverse(@pacer_fields)
         def __graph__(:dependencies), do: Enum.reverse(@pacer_dependencies)
