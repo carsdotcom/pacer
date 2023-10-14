@@ -30,5 +30,17 @@ defmodule Pacer.ConfigTest do
       Application.put_env(:pacer, :batch_telemetry_options, %{foo: "bar"})
       assert Config.batch_telemetry_options(NoOptions) == %{foo: "bar"}
     end
+
+    defmodule TestBatchConfig do
+      use Pacer.Workflow, batch_telemetry_options: %{batched: "config"}
+
+      graph do
+        field(:foo)
+      end
+    end
+
+    test "returns module-level options when provided" do
+      assert Config.batch_telemetry_options(TestBatchConfig) == %{batched: "config"}
+    end
   end
 end
