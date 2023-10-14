@@ -1,6 +1,6 @@
 defmodule Pacer.Config do
   @moduledoc """
-  The #{inspect(__MODULE__)} provides functions for
+  The #{inspect(__MODULE__)} module provides functions for
   extracting user-provided configuration values specific
   to Pacer.
   """
