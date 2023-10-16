@@ -59,24 +59,12 @@ defmodule Pacer.WorkflowTest do
 
   describe "telemetry" do
     test "execute/1 emits a [:pacer, :workflow, :start] and [:pacer, :workflow, :stop] event" do
-      :telemetry.attach(
-        "workflow-start",
-        [:pacer, :workflow, :start],
-        &TelemetryTest.handle_event/4,
-        %{destination_pid: self()}
-      )
-
-      :telemetry.attach(
-        "workflow-stop",
-        [:pacer, :workflow, :stop],
-        &TelemetryTest.handle_event/4,
-        %{destination_pid: self()}
-      )
+      ref = :telemetry_test.attach_event_handlers(self(), [[:pacer, :workflow, :start], [:pacer, :workflow, :stop]])
 
       Pacer.Workflow.execute(TestGraph)
 
-      assert_receive {[:pacer, :workflow, :start], _, %{workflow: TestGraph}}
-      assert_receive {[:pacer, :workflow, :stop], _, %{workflow: TestGraph}}
+      assert_received {[:pacer, :workflow, :start], ^ref, _, %{workflow: TestGraph}}
+      assert_received {[:pacer, :workflow, :stop], ^ref, _, %{workflow: TestGraph}}
     end
 
     defmodule RaisingWorkflow do
@@ -91,18 +79,13 @@ defmodule Pacer.WorkflowTest do
     end
 
     test "execute/1 emits a [:pacer, :workflow, :exception] event when the workflow execution raises" do
-      :telemetry.attach(
-        "workflow-exception",
-        [:pacer, :workflow, :exception],
-        &TelemetryTest.handle_event/4,
-        %{destination_pid: self()}
-      )
+      ref = :telemetry_test.attach_event_handlers(self(), [[:pacer, :workflow, :exception]])
 
       assert_raise(RuntimeError, fn ->
         Pacer.Workflow.execute(RaisingWorkflow)
       end)
 
-      assert_receive {[:pacer, :workflow, :exception], _, %{workflow: RaisingWorkflow}}
+      assert_received {[:pacer, :workflow, :exception], ^ref, _, %{workflow: RaisingWorkflow}}
     end
   end
 
