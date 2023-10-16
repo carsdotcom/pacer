@@ -59,7 +59,11 @@ defmodule Pacer.WorkflowTest do
 
   describe "telemetry" do
     test "execute/1 emits a [:pacer, :workflow, :start] and [:pacer, :workflow, :stop] event" do
-      ref = :telemetry_test.attach_event_handlers(self(), [[:pacer, :workflow, :start], [:pacer, :workflow, :stop]])
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:pacer, :workflow, :start],
+          [:pacer, :workflow, :stop]
+        ])
 
       Pacer.Workflow.execute(TestGraph)
 
@@ -846,7 +850,11 @@ defmodule Pacer.WorkflowTest do
         field(:a, default: 1)
 
         batch :requests, timeout: 1000 do
-          field(:b, resolver: &__MODULE__.calculate_b/1, dependencies: [:a], default: "ddddefault")
+          field(:b,
+            resolver: &__MODULE__.calculate_b/1,
+            dependencies: [:a],
+            default: "ddddefault"
+          )
 
           field(:c,
             resolver: &__MODULE__.calculate_c/1,
