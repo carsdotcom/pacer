@@ -58,5 +58,18 @@ defmodule Pacer.ConfigTest do
 
       assert Config.batch_telemetry_options(TestBatchConfig) == [batched: "config"]
     end
+
+    defmodule TestConfigWithMFA do
+      use Pacer.Workflow, batch_telemetry_options: {__MODULE__, :batch_telemetry_opts, []}
+
+      graph do
+        field(:foo)
+      end
+    end
+
+    test "returns {module, function, args} options stored in module config" do
+      assert Config.batch_telemetry_options(TestConfigWithMFA) ==
+               {TestConfigWithMFA, :batch_telemetry_opts, []}
+    end
   end
 end
