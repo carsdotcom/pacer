@@ -16,7 +16,6 @@ defmodule Pacer.MixProject do
       docs: docs(),
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
-      lockfile: "../../mix.lock",
       name: @name,
       source_url: @source_url,
       package: package(),
