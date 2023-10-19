@@ -79,4 +79,37 @@ defmodule Pacer.ConfigTest do
                {TestConfigWithMFA, :batch_telemetry_opts, []}
     end
   end
+
+  describe "fetch_batch_telemetry_options/1" do
+    defmodule MyWorkflowExample do
+      use Pacer.Workflow
+
+      graph do
+        field(:foo)
+      end
+
+      def default_options do
+        [
+          foo: "bar",
+          baz: "quux"
+        ]
+      end
+    end
+
+    test "invokes {module, fun, args} style config when present and converts the keyword list returned into a map" do
+      Application.put_env(
+        :pacer,
+        :batch_telemetry_options,
+        {MyWorkflowExample, :default_options, []}
+      )
+
+      assert Config.fetch_batch_telemetry_options(MyWorkflowExample) == %{foo: "bar", baz: "quux"}
+    end
+
+    test "converts keyword list style configuration into a map" do
+      Application.put_env(:pacer, :batch_telemetry_options, foo: "bar", baz: "quux")
+
+      assert Config.fetch_batch_telemetry_options(MyWorkflowExample) == %{foo: "bar", baz: "quux"}
+    end
+  end
 end
