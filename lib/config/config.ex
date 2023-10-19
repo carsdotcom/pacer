@@ -5,6 +5,21 @@ defmodule Pacer.Config do
   to Pacer.
   """
 
+  @doc """
+  Fetches configuration options for extending the metadata provided in the
+  `[:pacer, :execute_vertex, :start | :stop | :exception]` events for batched resolvers.
+
+  The configuration must be set under the key `:batch_telemetry_options` at the application
+  level (i.e., `Application.get_env(:pacer, :batch_telemetry_options)`) or when defining the
+  workflow itself (`use Pacer.Workflow, batch_telemetry_options: <opts>`).
+
+  The batch_telemetry_options defined by the user must be either:
+    - a keyword list, or
+    - a {module, function, args} mfa tuple; when invoked, this function must return a keyword list
+
+  The keyword list of values returned by the mfa-style config, or the hardcoded keyword list, is
+  fetched and converted into a map that gets merged into the telemetry event metadata for batched resolvers.
+  """
   @spec batch_telemetry_options(module()) :: keyword() | {module(), atom(), list()}
   def batch_telemetry_options(workflow_module) do
     case :persistent_term.get({__MODULE__, workflow_module, :batch_telemetry_options}, :unset) do
@@ -13,6 +28,12 @@ defmodule Pacer.Config do
     end
   end
 
+  @doc """
+  Takes the batch_telemetry_options configuration, invoking mfa-style config if available,
+  and converts the batch_telemetry_options keyword list into a map that gets merged into
+  the metadata for the `[:pacer, :execute_vertex, :start | :stop | :exception]` events for
+  batched resolvers.
+  """
   @spec fetch_batch_telemetry_options(module()) :: map()
   def fetch_batch_telemetry_options(workflow_module) do
     case batch_telemetry_options(workflow_module) do
