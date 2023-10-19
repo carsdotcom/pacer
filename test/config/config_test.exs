@@ -34,6 +34,11 @@ defmodule Pacer.ConfigTest do
       assert Config.batch_telemetry_options(NoOptions) == [foo: "bar"]
     end
 
+    test "accepts {module, function, args} tuples for batch_telemetry_options from global config" do
+      Application.put_env(:pacer, :batch_telemetry_options, {MyTelemetryOptions, :run, []})
+      assert Config.batch_telemetry_options(NoOptions) == {MyTelemetryOptions, :run, []}
+    end
+
     defmodule TestBatchConfig do
       use Pacer.Workflow, batch_telemetry_options: [batched: "config"]
 
