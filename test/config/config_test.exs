@@ -71,5 +71,12 @@ defmodule Pacer.ConfigTest do
       assert Config.batch_telemetry_options(TestConfigWithMFA) ==
                {TestConfigWithMFA, :batch_telemetry_opts, []}
     end
+
+    test "module config overrides global config when both are present and use {module, function, args} style config" do
+      Application.put_env(:pacer, :batch_telemetry_options, {PacerGlobal, :default_options, []})
+
+      assert Config.batch_telemetry_options(TestConfigWithMFA) ==
+               {TestConfigWithMFA, :batch_telemetry_opts, []}
+    end
   end
 end
