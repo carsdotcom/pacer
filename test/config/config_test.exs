@@ -26,16 +26,16 @@ defmodule Pacer.ConfigTest do
     end
 
     test "returns an empty map if no user-provided options are available" do
-      assert Config.batch_telemetry_options(NoOptions) == %{}
+      assert Config.batch_telemetry_options(NoOptions) == []
     end
 
     test "returns global batch_telemetry_options if no module-level options are provided" do
-      Application.put_env(:pacer, :batch_telemetry_options, %{foo: "bar"})
-      assert Config.batch_telemetry_options(NoOptions) == %{foo: "bar"}
+      Application.put_env(:pacer, :batch_telemetry_options, foo: "bar")
+      assert Config.batch_telemetry_options(NoOptions) == [foo: "bar"]
     end
 
     defmodule TestBatchConfig do
-      use Pacer.Workflow, batch_telemetry_options: %{batched: "config"}
+      use Pacer.Workflow, batch_telemetry_options: [batched: "config"]
 
       graph do
         field(:foo)
@@ -43,15 +43,15 @@ defmodule Pacer.ConfigTest do
     end
 
     test "returns module-level options when provided" do
-      assert Config.batch_telemetry_options(TestBatchConfig) == %{batched: "config"}
+      assert Config.batch_telemetry_options(TestBatchConfig) == [batched: "config"]
     end
 
     test "module-level batch_telemetry_options overrides global batch_telemetry_options" do
-      Application.put_env(:pacer, :batch_telemetry_options, %{
+      Application.put_env(:pacer, :batch_telemetry_options,
         batched: "this value should be overridden"
-      })
+      )
 
-      assert Config.batch_telemetry_options(TestBatchConfig) == %{batched: "config"}
+      assert Config.batch_telemetry_options(TestBatchConfig) == [batched: "config"]
     end
   end
 end
