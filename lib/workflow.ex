@@ -261,6 +261,7 @@ defmodule Pacer.Workflow do
   The order fields are defined in within a `graph` definition does not matter. For example, if you have a field `:request_one` that depends
   on another field `:request_two`, the fields can be declared in any order.
   """
+  alias Pacer.Config
   alias Pacer.Workflow.Error
   alias Pacer.Workflow.FieldNotSet
   alias Pacer.Workflow.Options
@@ -947,6 +948,8 @@ defmodule Pacer.Workflow do
 
     parent_pid = self()
 
+    user_provided_metadata = Config.fetch_batch_telemetry_options(module)
+
     resolvers
     |> filter_guarded_resolvers(workflow)
     |> Enum.map(fn {field, resolver} ->
@@ -958,18 +961,21 @@ defmodule Pacer.Workflow do
     end)
     |> Task.async_stream(
       fn {field, partial_workflow, resolver} ->
-        metadata = %{
-          field: field,
-          workflow: module,
-          parent_pid: parent_pid
-        }
+        metadata =
+          %{
+            field: field,
+            workflow: module,
+            parent_pid: parent_pid
+          }
+          |> Map.merge(user_provided_metadata)
 
         try do
           :telemetry.span(
             [:pacer, :execute_vertex],
             metadata,
             fn ->
-              {{field, resolver.(partial_workflow)}, %{parent_pid: parent_pid}}
+              {{field, resolver.(partial_workflow)},
+               Map.merge(%{parent_pid: parent_pid}, user_provided_metadata)}
             end
           )
         rescue
