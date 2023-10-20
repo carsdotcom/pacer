@@ -91,6 +91,29 @@ defmodule Pacer.WorkflowTest do
 
       assert_received {[:pacer, :workflow, :exception], ^ref, _, %{workflow: RaisingWorkflow}}
     end
+
+    test "batch resolvers inject user-provided telemetry config into metadata" do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:pacer, :execute_vertex, :start],
+          [:pacer, :execute_vertex, :stop]
+        ])
+
+      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
+
+      on_exit(fn ->
+        :persistent_term.erase({Pacer.Config, TestGraph, :batch_telemetry_options})
+        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
+      end)
+
+      telemetry_options = [span_context: :rand.uniform()]
+      Application.put_env(:pacer, :batch_telemetry_options, telemetry_options)
+
+      Pacer.Workflow.execute(TestGraph)
+
+      assert_received {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
+      assert_received {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
+    end
   end
 
   test "graph metadata" do
