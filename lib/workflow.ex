@@ -260,6 +260,91 @@ defmodule Pacer.Workflow do
 
   The order fields are defined in within a `graph` definition does not matter. For example, if you have a field `:request_one` that depends
   on another field `:request_two`, the fields can be declared in any order.
+
+  ## Telemetry
+
+  Pacer provides two levels of granularity for workflow telemetry: one at the entire workflow level, and one at the resolver level.
+
+  For workflow execution, Pacer will trigger the following telemetry events:
+
+  - `[:pacer, :workflow, :start]`
+      - Measurements include: `%{system_time: integer(), monotonic_time: integer()}`
+      - Metadata provided: `%{telemetry_span_context: term(), workflow: module()}`, where the `workflow` key contains the module name for the workflow being executed
+  - `[:pacer, :workflow, :stop]`
+     - Measurements include: `%{duration: integer(), monotonic_time: integer()}`
+     - Metadata provided: `%{telemetry_span_context: term(), workflow: module()}`, where the `workflow` key contains the module name for the workflow being executed
+  - `[:pacer, :workflow, :exception]`
+      - Measurements include: `%{duration: integer(), monotonic_time: integer()}`
+      - Metadata provided: %{kind: :throw | :error | :exit, reason: term(), stacktrace: list(), telemetry_span_context: term(), workflow: module()}, where the `workflow` key contains the module name for the workflow being executed
+
+  At the resolver level, Pacer will trigger the following telemetry events:
+
+  - `[:pacer, :execute_vertex, :start]`
+      - Measurements and metadata similar to `:workflow` start event, with the addition of the `%{field: atom()}` value passed in metadata. The `field` is the name of the field for which the resolver is being executed.
+  - `[:pacer, :execute_vertex, :stop]`
+      - Measurements and metadata similar to `:workflow` stop event, with the addition of the `%{field: atom()}` value passed in metadata. The `field` is the name of the field for which the resolver is being executed.
+  - `[:pacer, :execute_vertex, :exception]`
+      - Measurements and metadata similar to `:workflow` exception event, with the addition of the `%{field: atom()}` value passed in metadata. The `field` is the name of the field for which the resolver is being executed.
+
+  Additionally, for `[:pacer, :execute_vertex]` events fired on batched resolvers (which will run in parallel processes), users can provide their own metadata through configuration.
+
+  Users may provide either a keyword list of options which will be merged into the `:execute_vertex` event metadata, or an MFA `{mod, fun, args}` tuple that points to a function which
+  returns a keyword list that will be merged into the `:execute_vertex` event metadata.
+
+  There are two routes for configuring these telemetry options for batched resolvers: in the application environment using the `:pacer, :batch_telemetry_options` config key, or
+  on the individual workflow modules themselves by passing `:batch_telemetry_options` when invoking `use Pacer.Workflow`.
+  Configuration defined at the workflow module will override configuration defined in the application environment.
+
+  Here are a couple of examples:
+
+  ### User-Provided Telemetry Metadata for Batched Resolvers in Applicaton Config
+  ```elixir
+  # In config.exs (or whatever env config file you want to target):
+
+  config :pacer, :batch_telemetry_options, application_name: MyApp
+
+  ## When you invoke a workflow with batched resolvers now, you will get `%{application_name: MyApp}` merged into your
+  ## event metadata in the `[:pacer, :execute_vertex, :start | :stop | :exception]` events.
+  ```
+
+  ### User-Provided Telemetry Metadata for Batched Resolvers at the Workflow Level
+  ```elixir
+  defmodule MyWorkflow do
+    use Pacer.Workflow, batch_telemetry_options: [extra_context: "some context from my application"]
+
+    graph do
+      field(:a)
+
+      batch :long_running_requests do
+        field(:b, dependencies: [:a], resolver: &Requests.trigger_b/1, default: nil)
+        field(:c, dependencies: [:a], resolver: &Requests.trigger_c/1, default: nil)
+      end
+    end
+  end
+
+  ## Now when you invoke `Pacer.execute(MyWorkflow)`, you will get `%{extra_context: "some context from my application"}`
+  ## merged into the metadata for the `[:pacer, :execute_vertex, :start | :stop | :exception]` events for fields `:b` and `:c`
+  ```
+
+  Note that you can also provide an MFA tuple that points to a module/function that returns a keyword list of options to be
+  injected into the metadata on `:execute_vertex` telemetry events for batched resolvers. This allows users to execute code at runtime
+  to inject dynamic values into the metadata. Users may use this to inject things like span_context from the top-level workflow process
+  into the parallel processes that run the batch resolvers. This lets you propagate context from, i.e., a process dictionary at the top-level
+  into the sub-processes:
+
+  ```elixir
+  defmodule MyApp.BatchOptions do
+    def inject_context do
+      [span_context: MyTracingLibrary.Tracer.current_context()]
+    end
+  end
+
+  ## Use this function to inject span context by configuring it at the workflow level or in the application environment
+
+  ## In config.exs:
+
+  config :pacer, :batch_telemetry_options, {MyApp.BatchOptions, :inject_context, []}
+  ```
   """
   alias Pacer.Config
   alias Pacer.Workflow.Error
