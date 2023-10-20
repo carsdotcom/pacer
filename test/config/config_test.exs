@@ -4,19 +4,19 @@ defmodule Pacer.ConfigTest do
   alias Pacer.ConfigTest.NoOptions
   alias Pacer.Config
 
+  setup do
+    default = Application.get_env(:pacer, :batch_telemetry_options)
+
+    on_exit(fn ->
+      :persistent_term.erase({Config, NoOptions, :batch_telemetry_options})
+      :persistent_term.erase({Config, TestBatchConfig, :batch_telemetry_options})
+      Application.put_env(:pacer, :batch_telemetry_options, default)
+    end)
+
+    :ok
+  end
+
   describe "batch_telemetry_options/1" do
-    setup do
-      default = Application.get_env(:pacer, :batch_telemetry_options)
-
-      on_exit(fn ->
-        :persistent_term.erase({Config, NoOptions, :batch_telemetry_options})
-        :persistent_term.erase({Config, TestBatchConfig, :batch_telemetry_options})
-        Application.put_env(:pacer, :batch_telemetry_options, default)
-      end)
-
-      :ok
-    end
-
     defmodule NoOptions do
       use Pacer.Workflow
 
