@@ -57,6 +57,14 @@ defmodule Pacer.WorkflowTest do
   end
   """
 
+  setup do
+    on_exit(fn ->
+      :persistent_term.erase({Pacer.Config, TestGraph, :batch_telemetry_options})
+    end)
+
+    :ok
+  end
+
   describe "telemetry" do
     test "execute/1 emits a [:pacer, :workflow, :start] and [:pacer, :workflow, :stop] event" do
       ref =
@@ -93,26 +101,56 @@ defmodule Pacer.WorkflowTest do
     end
 
     test "batch resolvers inject user-provided telemetry config into metadata" do
+      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
+
+      on_exit(fn ->
+        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
+      end)
+
       ref =
         :telemetry_test.attach_event_handlers(self(), [
           [:pacer, :execute_vertex, :start],
           [:pacer, :execute_vertex, :stop]
         ])
 
-      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
-
-      on_exit(fn ->
-        :persistent_term.erase({Pacer.Config, TestGraph, :batch_telemetry_options})
-        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
-      end)
-
       telemetry_options = [span_context: :rand.uniform()]
       Application.put_env(:pacer, :batch_telemetry_options, telemetry_options)
 
       Pacer.Workflow.execute(TestGraph)
 
-      assert_received {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
-      assert_received {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
+      assert_receive {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
+      assert_receive {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
+    end
+
+    defmodule TestBatchConfigProvider do
+      def telemetry_options do
+        [span_context: :rand.uniform()]
+      end
+    end
+
+    test "batch resolvers inject user-provided telemetry config into metadata when configured to use an MFA returning a keyword list" do
+      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
+
+      on_exit(fn ->
+        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
+      end)
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:pacer, :execute_vertex, :start],
+          [:pacer, :execute_vertex, :stop]
+        ])
+
+      Application.put_env(
+        :pacer,
+        :batch_telemetry_options,
+        {TestBatchConfigProvider, :telemetry_options, []}
+      )
+
+      Pacer.Workflow.execute(TestGraph)
+
+      assert_receive {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
+      assert_receive {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
     end
   end
 
