@@ -57,6 +57,14 @@ defmodule Pacer.WorkflowTest do
   end
   """
 
+  setup do
+    on_exit(fn ->
+      :persistent_term.erase({Pacer.Config, TestGraph, :batch_telemetry_options})
+    end)
+
+    :ok
+  end
+
   describe "telemetry" do
     test "execute/1 emits a [:pacer, :workflow, :start] and [:pacer, :workflow, :stop] event" do
       ref =
@@ -90,6 +98,59 @@ defmodule Pacer.WorkflowTest do
       end)
 
       assert_received {[:pacer, :workflow, :exception], ^ref, _, %{workflow: RaisingWorkflow}}
+    end
+
+    test "batch resolvers inject user-provided telemetry config into metadata" do
+      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
+
+      on_exit(fn ->
+        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
+      end)
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:pacer, :execute_vertex, :start],
+          [:pacer, :execute_vertex, :stop]
+        ])
+
+      telemetry_options = [span_context: :rand.uniform()]
+      Application.put_env(:pacer, :batch_telemetry_options, telemetry_options)
+
+      Pacer.Workflow.execute(TestGraph)
+
+      assert_receive {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
+      assert_receive {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
+    end
+
+    defmodule TestBatchConfigProvider do
+      def telemetry_options do
+        [span_context: :rand.uniform()]
+      end
+    end
+
+    test "batch resolvers inject user-provided telemetry config into metadata when configured to use an MFA returning a keyword list" do
+      starting_config = Application.get_env(:pacer, :batch_telemetry_options)
+
+      on_exit(fn ->
+        Application.put_env(:pacer, :batch_telemetry_options, starting_config)
+      end)
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:pacer, :execute_vertex, :start],
+          [:pacer, :execute_vertex, :stop]
+        ])
+
+      Application.put_env(
+        :pacer,
+        :batch_telemetry_options,
+        {TestBatchConfigProvider, :telemetry_options, []}
+      )
+
+      Pacer.Workflow.execute(TestGraph)
+
+      assert_receive {[:pacer, :execute_vertex, :start], ^ref, _, %{span_context: _}}
+      assert_receive {[:pacer, :execute_vertex, :stop], ^ref, _, %{span_context: _}}
     end
   end
 
@@ -239,6 +300,34 @@ defmodule Pacer.WorkflowTest do
       assert_raise Error, expected_error_message, fn ->
         Code.eval_string(module)
       end
+    end
+  end
+
+  describe "workflow config" do
+    defmodule WorkflowWithBatchOptions do
+      use Pacer.Workflow, batch_telemetry_options: %{some_options: "foo"}
+
+      graph do
+        field(:bar)
+      end
+    end
+
+    test "allows batch_telemetry_config option to be passed" do
+      assert WorkflowWithBatchOptions.__config__(:batch_telemetry_options) == %{
+               some_options: "foo"
+             }
+    end
+
+    defmodule WorkflowWithNoConfigOptions do
+      use Pacer.Workflow
+
+      graph do
+        field(:foo)
+      end
+    end
+
+    test "returns nil for missing or non-existent config values" do
+      assert is_nil(WorkflowWithNoConfigOptions.__config__(:foo))
     end
   end
 
