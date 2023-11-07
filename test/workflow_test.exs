@@ -24,10 +24,18 @@ defmodule Pacer.WorkflowTest do
           dependencies: [:custom_field, :field_a],
           default: "this is a default value for request2"
         )
+
+        field(:request_3,
+          resolver: &__MODULE__.do_error/1,
+          dependencies: [:custom_field],
+          default: :request_3
+        )
       end
     end
 
     def do_work(_), do: :ok
+
+    def do_error(_), do: throw(:oops)
   end
 
   defmodule Resolvers do
@@ -160,7 +168,8 @@ defmodule Pacer.WorkflowTest do
              :field_a,
              :field_with_default,
              :request_1,
-             :request_2
+             :request_2,
+             :request_3
            ]
   end
 
@@ -183,7 +192,11 @@ defmodule Pacer.WorkflowTest do
   end
 
   test "batch metadata" do
-    assert TestGraph.__graph__(:batch_fields, :http_requests) == [:request_1, :request_2]
+    assert TestGraph.__graph__(:batch_fields, :http_requests) == [
+             :request_1,
+             :request_2,
+             :request_3
+           ]
 
     assert TestGraph.__graph__(:http_requests, :options) == [
              on_timeout: :kill_task,
@@ -220,11 +233,11 @@ defmodule Pacer.WorkflowTest do
 
     {:batch, batch_resolvers} = TestGraph.__graph__(:resolver, :http_requests)
 
-    assert Enum.count(batch_resolvers) == 2,
-           "Expected http_requests batch node to have 2 resolvers. Got #{inspect(batch_resolvers)}"
+    assert Enum.count(batch_resolvers) == 3,
+           "Expected http_requests batch node to have 3 resolvers. Got #{inspect(batch_resolvers)}"
 
     Enum.each(batch_resolvers, fn {field_name, resolver} ->
-      assert field_name in [:request_1, :request_2]
+      assert field_name in [:request_1, :request_2, :request_3]
       assert is_function(resolver, 1)
     end)
   end

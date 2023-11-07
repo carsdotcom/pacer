@@ -1018,8 +1018,8 @@ defmodule Pacer.Workflow do
           :telemetry.span([:pacer, :execute_vertex], metadata, fn ->
             {Map.put(workflow, field, resolver.(workflow)), metadata}
           end)
-        rescue
-          _error ->
+        catch
+          _kind, _error ->
             workflow
         end
 
@@ -1040,7 +1040,7 @@ defmodule Pacer.Workflow do
     |> Enum.map(fn {field, resolver} ->
       dependencies = module.__graph__(:batched_field_dependencies, field)
       # We want to also pass the current value (which is the default) of the field itself,
-      # so that we can use it in the rescue/fallback clause
+      # so that we can use it in the fallback clause
       partial_workflow = Map.take(workflow, [field | dependencies])
       {field, partial_workflow, resolver}
     end)
@@ -1063,8 +1063,8 @@ defmodule Pacer.Workflow do
                Map.merge(%{parent_pid: parent_pid}, user_provided_metadata)}
             end
           )
-        rescue
-          _error ->
+        catch
+          _kind, _error ->
             {field, Map.get(partial_workflow, field)}
         end
       end,
