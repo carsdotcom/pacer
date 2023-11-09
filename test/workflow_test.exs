@@ -25,17 +25,38 @@ defmodule Pacer.WorkflowTest do
           default: "this is a default value for request2"
         )
 
-        field(:request_3,
-          resolver: &__MODULE__.do_error/1,
+        field(:elixir_raise,
+          resolver: &__MODULE__.elixir_raise/1,
           dependencies: [:custom_field],
-          default: :request_3
+          default: :elixir_raise
+        )
+
+        field(:erlang_throw,
+          resolver: &__MODULE__.erlang_throw/1,
+          dependencies: [:custom_field],
+          default: :erlang_throw
+        )
+
+        field(:erlang_exit,
+          resolver: &__MODULE__.erlang_exit/1,
+          dependencies: [:custom_field],
+          default: :erlang_exit
+        )
+
+        field(:erlang_error,
+          resolver: &__MODULE__.erlang_error/1,
+          dependencies: [:custom_field],
+          default: :erlang_error
         )
       end
     end
 
     def do_work(_), do: :ok
 
-    def do_error(_), do: throw(:oops)
+    def elixir_raise(_), do: raise("boom baby!")
+    def erlang_throw(_), do: :erlang.throw(:oops)
+    def erlang_exit(_), do: :erlang.exit(:no_reason)
+    def erlang_error(_), do: :erlang.error(:boom)
   end
 
   defmodule Resolvers do
@@ -169,7 +190,10 @@ defmodule Pacer.WorkflowTest do
              :field_with_default,
              :request_1,
              :request_2,
-             :request_3
+             :elixir_raise,
+             :erlang_throw,
+             :erlang_exit,
+             :erlang_error
            ]
   end
 
@@ -195,7 +219,10 @@ defmodule Pacer.WorkflowTest do
     assert TestGraph.__graph__(:batch_fields, :http_requests) == [
              :request_1,
              :request_2,
-             :request_3
+             :elixir_raise,
+             :erlang_throw,
+             :erlang_exit,
+             :erlang_error
            ]
 
     assert TestGraph.__graph__(:http_requests, :options) == [
@@ -233,11 +260,22 @@ defmodule Pacer.WorkflowTest do
 
     {:batch, batch_resolvers} = TestGraph.__graph__(:resolver, :http_requests)
 
-    assert Enum.count(batch_resolvers) == 3,
-           "Expected http_requests batch node to have 3 resolvers. Got #{inspect(batch_resolvers)}"
+    num_resolvers = Enum.count(batch_resolvers)
+
+    assert num_resolvers == 6,
+           "Expected http_requests batch node to have 3 resolvers. Got #{num_resolvers}:\n
+           #{inspect(batch_resolvers)}"
 
     Enum.each(batch_resolvers, fn {field_name, resolver} ->
-      assert field_name in [:request_1, :request_2, :request_3]
+      assert field_name in [
+               :request_1,
+               :request_2,
+               :elixir_raise,
+               :erlang_throw,
+               :erlang_exit,
+               :erlang_error
+             ]
+
       assert is_function(resolver, 1)
     end)
   end
