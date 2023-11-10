@@ -24,10 +24,39 @@ defmodule Pacer.WorkflowTest do
           dependencies: [:custom_field, :field_a],
           default: "this is a default value for request2"
         )
+
+        field(:elixir_raise,
+          resolver: &__MODULE__.elixir_raise/1,
+          dependencies: [:custom_field],
+          default: :elixir_raise
+        )
+
+        field(:erlang_throw,
+          resolver: &__MODULE__.erlang_throw/1,
+          dependencies: [:custom_field],
+          default: :erlang_throw
+        )
+
+        field(:erlang_exit,
+          resolver: &__MODULE__.erlang_exit/1,
+          dependencies: [:custom_field],
+          default: :erlang_exit
+        )
+
+        field(:erlang_error,
+          resolver: &__MODULE__.erlang_error/1,
+          dependencies: [:custom_field],
+          default: :erlang_error
+        )
       end
     end
 
     def do_work(_), do: :ok
+
+    def elixir_raise(_), do: raise("boom baby!")
+    def erlang_throw(_), do: :erlang.throw(:oops)
+    def erlang_exit(_), do: :erlang.exit(:no_reason)
+    def erlang_error(_), do: :erlang.error(:boom)
   end
 
   defmodule Resolvers do
@@ -160,7 +189,11 @@ defmodule Pacer.WorkflowTest do
              :field_a,
              :field_with_default,
              :request_1,
-             :request_2
+             :request_2,
+             :elixir_raise,
+             :erlang_throw,
+             :erlang_exit,
+             :erlang_error
            ]
   end
 
@@ -183,7 +216,14 @@ defmodule Pacer.WorkflowTest do
   end
 
   test "batch metadata" do
-    assert TestGraph.__graph__(:batch_fields, :http_requests) == [:request_1, :request_2]
+    assert TestGraph.__graph__(:batch_fields, :http_requests) == [
+             :request_1,
+             :request_2,
+             :elixir_raise,
+             :erlang_throw,
+             :erlang_exit,
+             :erlang_error
+           ]
 
     assert TestGraph.__graph__(:http_requests, :options) == [
              on_timeout: :kill_task,
@@ -220,11 +260,22 @@ defmodule Pacer.WorkflowTest do
 
     {:batch, batch_resolvers} = TestGraph.__graph__(:resolver, :http_requests)
 
-    assert Enum.count(batch_resolvers) == 2,
-           "Expected http_requests batch node to have 2 resolvers. Got #{inspect(batch_resolvers)}"
+    num_resolvers = Enum.count(batch_resolvers)
+
+    assert num_resolvers == 6,
+           "Expected http_requests batch node to have 3 resolvers. Got #{num_resolvers}:\n
+           #{inspect(batch_resolvers)}"
 
     Enum.each(batch_resolvers, fn {field_name, resolver} ->
-      assert field_name in [:request_1, :request_2]
+      assert field_name in [
+               :request_1,
+               :request_2,
+               :elixir_raise,
+               :erlang_throw,
+               :erlang_exit,
+               :erlang_error
+             ]
+
       assert is_function(resolver, 1)
     end)
   end
