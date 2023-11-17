@@ -1005,9 +1005,16 @@ defmodule Pacer.Workflow do
     case module.__graph__(:resolver, vertex) do
       {:field, resolver} when is_function(resolver, 1) ->
         metadata = %{field: vertex, workflow: workflow.__struct__}
+        resolver_args = Map.take(workflow, [vertex | module.__graph__(:dependencies, vertex)])
 
         :telemetry.span([:pacer, :execute_vertex], metadata, fn ->
-          result = Map.put(workflow, vertex, resolver.(workflow))
+          result =
+            Map.put(
+              workflow,
+              vertex,
+              resolver.(resolver_args)
+            )
+
           {result, metadata}
         end)
 
@@ -1015,8 +1022,15 @@ defmodule Pacer.Workflow do
         metadata = %{field: field, workflow: workflow.__struct__}
 
         try do
+          resolver_args =
+            Map.take(workflow, [field | module.__graph__(:batched_field_dependencies, field)])
+
           :telemetry.span([:pacer, :execute_vertex], metadata, fn ->
-            {Map.put(workflow, field, resolver.(workflow)), metadata}
+            {Map.put(
+               workflow,
+               field,
+               resolver.(resolver_args)
+             ), metadata}
           end)
         catch
           _kind, _error ->

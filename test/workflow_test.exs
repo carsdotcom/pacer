@@ -290,6 +290,33 @@ defmodule Pacer.WorkflowTest do
     refute Map.has_key?(result, :field_with_default)
   end
 
+  test "resolver functions only receive their explicit dependencies and the current field when invoked" do
+    defmodule ResolverInputSizeTest do
+      use Pacer.Workflow
+
+      graph do
+        field(:a, default: 1)
+        field(:b, resolver: &__MODULE__.resolve_b/1, dependencies: [:a])
+        field(:c, resolver: &__MODULE__.resolve_c/1, dependencies: [:a, :b])
+      end
+
+      def resolve_b(args) do
+        assert map_size(args) == 2
+        assert Map.has_key?(args, :a)
+        assert Map.has_key?(args, :b)
+      end
+
+      def resolve_c(args) do
+        assert map_size(args) == 3
+        assert Map.has_key?(args, :a)
+        assert Map.has_key?(args, :b)
+        assert Map.has_key?(args, :c)
+      end
+    end
+
+    Pacer.Workflow.execute(ResolverInputSizeTest)
+  end
+
   test "field defaults" do
     assert %TestGraph{
              field_a: %FieldNotSet{},
