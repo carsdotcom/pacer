@@ -47,7 +47,7 @@ defmodule Pacer.MixProject do
     [
       main: "Pacer.Workflow",
       logo: __DIR__ <> "/assets/PACER.png",
-      extras: ["README.md"]
+      extras: ["README.md", "LICENSE"]
     ]
   end
 
