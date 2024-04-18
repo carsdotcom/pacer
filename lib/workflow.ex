@@ -911,8 +911,12 @@ defmodule Pacer.Workflow do
   end
 
   defp validate_resolvers(module) do
-    for {field, resolver_fun} <- Module.get_attribute(module, :pacer_resolvers) do
-      Enum.into(Function.info(resolver_fun), %{})
+    module
+    |> Module.get_attribute(:pacer_resolvers)
+    |> Enum.map(fn {field, resolver_fun} ->
+      resolver_fun
+      |> Function.info()
+      |> Map.new()
       |> then(fn info ->
         unless function_exported?(info.module, info.name, info.arity) do
           raise Error, """
@@ -923,7 +927,7 @@ defmodule Pacer.Workflow do
           """
         end
       end)
-    end
+    end)
   end
 
   @spec ensure_no_duplicate_fields(module(), atom()) :: :ok | no_return()
