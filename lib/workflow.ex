@@ -905,8 +905,25 @@ defmodule Pacer.Workflow do
   @spec __after_compile__(Macro.Env.t(), binary()) :: :ok | no_return()
   def __after_compile__(%{module: module} = _env, _) do
     _ = validate_dependencies(module)
+    _ = validate_resolvers(module)
 
     :ok
+  end
+
+  defp validate_resolvers(module) do
+    for {field, resolver_fun} <- Module.get_attribute(module, :pacer_resolvers) do
+      Enum.into(Function.info(resolver_fun), %{})
+      |> then(fn info ->
+        unless function_exported?(info.module, info.name, info.arity) do
+          raise Error, """
+          Resolver for field `#{inspect(field)}` is undefined. Ensure that the resolver you intend to use
+          has been defined and you have no mispellings.
+
+          Resolver Function: #{inspect(resolver_fun)}
+          """
+        end
+      end)
+    end
   end
 
   @spec ensure_no_duplicate_fields(module(), atom()) :: :ok | no_return()
