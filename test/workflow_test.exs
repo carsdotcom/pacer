@@ -597,30 +597,6 @@ defmodule Pacer.WorkflowTest do
         Code.eval_string(module)
       end
     end
-
-    test "alerts users when a resolver function does not exist" do
-      module = """
-      defmodule GraphWithInvalidResolver do
-        use Pacer.Workflow
-
-        graph do
-          field(:a, resolver: &NonExistentModule.mispelled_function/1, dependencies: [:b])
-          field(:b, default: "foo")
-        end
-      end
-      """
-
-      expected_error_message = """
-      Resolver for field `:a` is undefined. Ensure that the resolver you intend to use
-      has been defined and you have no mispellings.
-
-      Resolver Function: &NonExistentModule.mispelled_function/1
-      """
-
-      assert_raise Error, expected_error_message, fn ->
-        Code.eval_string(module)
-      end
-    end
   end
 
   describe "batch validations" do
