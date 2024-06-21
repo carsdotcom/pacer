@@ -351,6 +351,7 @@ defmodule Pacer.Workflow do
   alias Pacer.Workflow.FieldNotSet
   alias Pacer.Workflow.Options
 
+  require Logger
   require Pacer.Docs
 
   @example_graph_message """
@@ -402,6 +403,10 @@ defmodule Pacer.Workflow do
         :pacer_generate_docs?,
         generate_docs?
       )
+
+      Module.register_attribute(__MODULE__, :pacer_debug_mode?, accumulate: false)
+      debug_mode? = Keyword.get(unquote(opts), :debug_mode?, false)
+      Module.put_attribute(__MODULE__, :pacer_debug_mode?, debug_mode?)
 
       batch_telemetry_options = Keyword.get(unquote(opts), :batch_telemetry_options, %{})
 
@@ -642,6 +647,7 @@ defmodule Pacer.Workflow do
         defstruct Enum.reverse(@pacer_struct_fields)
 
         def __config__(:batch_telemetry_options), do: @pacer_batch_telemetry_options
+        def __config__(:debug_mode?), do: @pacer_debug_mode?
         def __config__(_), do: nil
 
         def __graph__(:fields), do: Enum.reverse(@pacer_fields)
@@ -1054,7 +1060,16 @@ defmodule Pacer.Workflow do
              ), metadata}
           end)
         catch
-          _kind, _error ->
+          _kind, error ->
+            if module.__config__(:debug_mode?) do
+              Logger.error("""
+              Resolver for #{inspect(module)}.#{vertex}'s resolver returned default.
+              Your resolver function failed for #{inspect(error)}.
+
+              Returning default value of: #{inspect(Map.get(workflow, field))}
+              """)
+            end
+
             workflow
         end
 

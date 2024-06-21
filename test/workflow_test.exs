@@ -1,6 +1,8 @@
 defmodule Pacer.WorkflowTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Pacer.Workflow.Error
   alias Pacer.Workflow.FieldNotSet
 
@@ -1183,6 +1185,37 @@ defmodule Pacer.WorkflowTest do
       end
 
       assert {:ok, "strict digraph {\n}\n"} = EmptyGraph.__graph__(:visualization)
+    end
+  end
+
+  @batch_resolver_error_log """
+  Resolver for Pacer.WorkflowTest.DebugModeTrueWorkflowWithResolverFailure.http_requests's resolver returned default.
+  Your resolver function failed for %RuntimeError{message: \"OH NO\"}.
+
+  Returning default value of: :hello
+  """
+  describe "execute with debug_mode on" do
+    defmodule DebugModeTrueWorkflowWithResolverFailure do
+      use Pacer.Workflow, debug_mode?: true
+
+      graph do
+        field(:a, default: 1)
+
+        batch :http_requests do
+          field(:b, resolver: &__MODULE__.calculate_b/1, dependencies: [:a], default: :hello)
+        end
+      end
+
+      def calculate_b(%{a: _a}), do: raise("OH NO")
+    end
+
+    test "when field's resolver raises, logs resolver failure message with error and default value" do
+      logs =
+        capture_log(fn ->
+          Pacer.Workflow.execute(%DebugModeTrueWorkflowWithResolverFailure{})
+        end)
+
+      assert logs =~ @batch_resolver_error_log
     end
   end
 end
