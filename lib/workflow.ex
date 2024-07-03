@@ -345,6 +345,32 @@ defmodule Pacer.Workflow do
 
   config :pacer, :batch_telemetry_options, {MyApp.BatchOptions, :inject_context, []}
   ```
+
+  ### Using debug_mode config:
+
+  An optional config for debug mode will log out caught errors from batch resolvers.
+  This is helpful for local development as the workflow will catch the error and return
+  the default to keep the workflow continuing.
+
+  ```elixir
+  defmodule MyWorkflow do
+    use Pacer.Workfow, debug_mode?: true
+
+     graph do
+        field(:a, default: 1)
+
+        batch :http_requests do
+          field(:b, resolver: &__MODULE__.calculate_b/1, dependencies: [:a], default: :hello)
+        end
+      end
+
+      def calculate_b(%{a: _a}), do: raise("OH NO")
+  end
+  ```
+  When running the workflow above, field b will silently raise as the default
+  will be returned. In debug mode, you will also get a log telling you the error
+  and the default returned.
+
   """
   alias Pacer.Config
   alias Pacer.Workflow.Error
