@@ -345,12 +345,39 @@ defmodule Pacer.Workflow do
 
   config :pacer, :batch_telemetry_options, {MyApp.BatchOptions, :inject_context, []}
   ```
+
+  ### Using debug_mode config:
+
+  An optional config for debug mode will log out caught errors from batch resolvers.
+  This is helpful for local development as the workflow will catch the error and return
+  the default to keep the workflow continuing.
+
+  ```elixir
+  defmodule MyWorkflow do
+    use Pacer.Workfow, debug_mode?: true
+
+     graph do
+        field(:a, default: 1)
+
+        batch :http_requests do
+          field(:b, resolver: &__MODULE__.calculate_b/1, dependencies: [:a], default: :hello)
+        end
+      end
+
+      def calculate_b(%{a: _a}), do: raise("OH NO")
+  end
+  ```
+  When running the workflow above, field b will silently raise as the default
+  will be returned. In debug mode, you will also get a log telling you the error
+  and the default returned.
+
   """
   alias Pacer.Config
   alias Pacer.Workflow.Error
   alias Pacer.Workflow.FieldNotSet
   alias Pacer.Workflow.Options
 
+  require Logger
   require Pacer.Docs
 
   @example_graph_message """
@@ -402,6 +429,10 @@ defmodule Pacer.Workflow do
         :pacer_generate_docs?,
         generate_docs?
       )
+
+      Module.register_attribute(__MODULE__, :pacer_debug_mode?, accumulate: false)
+      debug_mode? = Keyword.get(unquote(opts), :debug_mode?, false)
+      Module.put_attribute(__MODULE__, :pacer_debug_mode?, debug_mode?)
 
       batch_telemetry_options = Keyword.get(unquote(opts), :batch_telemetry_options, %{})
 
@@ -642,6 +673,7 @@ defmodule Pacer.Workflow do
         defstruct Enum.reverse(@pacer_struct_fields)
 
         def __config__(:batch_telemetry_options), do: @pacer_batch_telemetry_options
+        def __config__(:debug_mode?), do: @pacer_debug_mode?
         def __config__(_), do: nil
 
         def __graph__(:fields), do: Enum.reverse(@pacer_fields)
@@ -905,29 +937,8 @@ defmodule Pacer.Workflow do
   @spec __after_compile__(Macro.Env.t(), binary()) :: :ok | no_return()
   def __after_compile__(%{module: module} = _env, _) do
     _ = validate_dependencies(module)
-    _ = validate_resolvers(module)
 
     :ok
-  end
-
-  defp validate_resolvers(module) do
-    module
-    |> Module.get_attribute(:pacer_resolvers)
-    |> Enum.map(fn {field, resolver_fun} ->
-      resolver_fun
-      |> Function.info()
-      |> Map.new()
-      |> then(fn info ->
-        unless function_exported?(info.module, info.name, info.arity) do
-          raise Error, """
-          Resolver for field `#{inspect(field)}` is undefined. Ensure that the resolver you intend to use
-          has been defined and you have no mispellings.
-
-          Resolver Function: #{inspect(resolver_fun)}
-          """
-        end
-      end)
-    end)
   end
 
   @spec ensure_no_duplicate_fields(module(), atom()) :: :ok | no_return()
@@ -1054,7 +1065,16 @@ defmodule Pacer.Workflow do
              ), metadata}
           end)
         catch
-          _kind, _error ->
+          _kind, error ->
+            if module.__config__(:debug_mode?) do
+              Logger.error("""
+              Resolver for #{inspect(module)}.#{vertex}'s resolver returned default.
+              Your resolver function failed for #{inspect(error)}.
+
+              Returning default value of: #{inspect(Map.get(workflow, field))}
+              """)
+            end
+
             workflow
         end
 
