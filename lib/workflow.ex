@@ -198,7 +198,7 @@ defmodule Pacer.Workflow do
       end
 
       def resolve(inputs) do
-        IO.inspect(inputs.field_one_value, label: "Received field_one's value")
+        IO.inspect(inputs.field_one, label: "Received field_one's value")
       end
     end
     ```
