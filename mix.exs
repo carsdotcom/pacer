@@ -2,7 +2,7 @@ defmodule Pacer.MixProject do
   use Mix.Project
 
   @name "Pacer"
-  @version "0.1.6"
+  @version "0.1.7"
   @source_url "https://github.com/carsdotcom/pacer"
 
   def project do
