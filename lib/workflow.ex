@@ -198,7 +198,7 @@ defmodule Pacer.Workflow do
       end
 
       def resolve(inputs) do
-        IO.inspect(inputs.field_one_value, label: "Received field_one's value")
+        IO.inspect(inputs.field_one, label: "Received field_one's value")
       end
     end
     ```
@@ -923,7 +923,7 @@ defmodule Pacer.Workflow do
     message =
       case Enum.to_list(visited) do
         [reflexive_vertex] -> "Field `#{reflexive_vertex}` depends on itself."
-        _ -> Enum.join(visited, ", ")
+        _ -> visited |> Enum.sort() |> Enum.join(", ")
       end
 
     raise Error, """
