@@ -61,7 +61,7 @@ defmodule Pacer.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:libgraph, "~> 0.16.0"},
       {:nimble_options, ">= 0.0.0"},
       {:telemetry, "~> 1.2 or ~> 0.4"}
