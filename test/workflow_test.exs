@@ -345,23 +345,14 @@ defmodule Pacer.WorkflowTest do
       end
       """
 
-      possible_floppy_error1 = """
+      error_message = """
       Could not sort dependencies.
       The following dependencies form a cycle:
 
       a, b
       """
 
-      possible_floppy_error2 = """
-      Could not sort dependencies.
-      The following dependencies form a cycle:
-
-      b, a
-      """
-
-      assert %Error{message: error_message} = catch_error(Code.eval_string(module))
-
-      assert error_message in [possible_floppy_error1, possible_floppy_error2]
+      assert %Error{message: ^error_message} = catch_error(Code.eval_string(module))
     end
 
     test "detects reflexive cycles" do

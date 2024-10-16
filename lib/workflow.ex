@@ -923,7 +923,7 @@ defmodule Pacer.Workflow do
     message =
       case Enum.to_list(visited) do
         [reflexive_vertex] -> "Field `#{reflexive_vertex}` depends on itself."
-        _ -> Enum.join(visited, ", ")
+        _ -> visited |> Enum.sort() |> Enum.join(", ")
       end
 
     raise Error, """
