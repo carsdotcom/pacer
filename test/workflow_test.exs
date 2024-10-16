@@ -345,14 +345,16 @@ defmodule Pacer.WorkflowTest do
       end
       """
 
-      error_message = """
+      expected_error_message = """
       Could not sort dependencies.
       The following dependencies form a cycle:
 
       a, b
       """
 
-      assert %Error{message: ^error_message} = catch_error(Code.eval_string(module))
+      assert_raise Error, expected_error_message, fn ->
+        Code.eval_string(module)
+      end
     end
 
     test "detects reflexive cycles" do
