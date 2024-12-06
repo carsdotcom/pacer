@@ -28,9 +28,9 @@ Add :pacer to the list of dependencies in `mix.exs`:
 - Using Pacer when your dependency graph is a line, or if you just have a
   handful of data points. You would be better off using a pipeline of function
   calls. It would be easier to write, clearer to read, and faster to execute.
-- Not running your workflow in your tests. The main public interface of your
-  workflow is calling `Pacer.Workflow.execute/1` on it. Having a test file
-  for a Pacer workflow that does not do this, is like having any other module
+- Untested Workflow. The main public interface of your workflow is
+  calling `Pacer.Workflow.execute/1` on it. Having a test file for a
+  Pacer workflow that does not do this, is like having any other module
   where the main public interface is not exercised in the tests.
 
   [Here is a repo with some practical examples of Pacer Anti-patterns](https://github.com/dewetblomerus/pacer_anti_patterns)
