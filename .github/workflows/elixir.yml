@@ -23,7 +23,7 @@ jobs:
         elixir-version: '1.15.6' # Define the elixir version [required]
         otp-version: '24.X' # Define the OTP version [required]
     - name: Restore dependencies cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: deps
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
