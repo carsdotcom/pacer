@@ -63,8 +63,10 @@ defmodule Pacer.MixProject do
     [
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:libgraph, "~> 0.16.0"},
-      {:nimble_options, ">= 0.0.0"},
-      {:telemetry, "~> 1.2 or ~> 0.4"}
+      {:spark, "~> 2.2"},
+      {:telemetry, "~> 1.2 or ~> 0.4"},
+      # for generating `.formatter.exs`'s `spark_locals_without_parens`
+      {:sourceror, "~> 1.7", only: [:dev, :test]}
     ]
   end
 end
