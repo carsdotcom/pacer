@@ -1060,6 +1060,80 @@ defmodule Pacer.WorkflowTest do
     end
   end
 
+  describe "execute/2 with :only" do
+    defmodule OnlyWorkflow do
+      use Pacer.Workflow
+
+      graph do
+        field(:a, default: 1)
+        field(:b, resolver: &__MODULE__.plus_one/1, dependencies: [:a], default: :unset)
+
+        batch :requests do
+          field(:c, resolver: &__MODULE__.plus_one/1, dependencies: [:a], default: :unset)
+          field(:d, resolver: &__MODULE__.plus_one/1, dependencies: [:a], default: :unset)
+        end
+      end
+
+      def plus_one(%{a: a}), do: a + 1
+    end
+
+    defmodule ChainWorkflow do
+      use Pacer.Workflow
+
+      graph do
+        field(:x, resolver: &__MODULE__.one/1, dependencies: [:other], default: 0)
+        field(:other, default: :unset)
+        field(:y, resolver: &__MODULE__.succ_of_x/1, dependencies: [:x], default: 0)
+
+        batch :b do
+          field(:z, resolver: &__MODULE__.succ_of_y/1, dependencies: [:y], default: 0)
+        end
+      end
+
+      def one(_), do: 1
+      def succ_of_x(%{x: x}), do: x + 1
+      def succ_of_y(%{y: y}), do: y + 1
+    end
+
+    test "runs only the listed plain fields" do
+      assert %OnlyWorkflow{a: 1, b: 2, c: :unset, d: :unset} ==
+               Pacer.Workflow.execute(%OnlyWorkflow{}, only: [:b])
+    end
+
+    test "runs only the listed fields of a batch" do
+      assert %OnlyWorkflow{a: 1, b: :unset, c: 2, d: :unset} ==
+               Pacer.Workflow.execute(OnlyWorkflow, only: [:c])
+    end
+
+    test "uses values set on the struct" do
+      assert %OnlyWorkflow{a: 5, b: 6, c: :unset, d: 6} ==
+               Pacer.Workflow.execute(%OnlyWorkflow{a: 5}, only: [:b, :d])
+    end
+
+    test "runs transitive dependencies of the listed fields by default" do
+      assert %ChainWorkflow{x: 1, y: 2, z: 3, other: :unset} ==
+               Pacer.Workflow.execute(ChainWorkflow, only: [:z])
+    end
+
+    test "include_dependencies: false runs only the listed fields" do
+      assert %ChainWorkflow{x: 0, y: 5, z: 6, other: :unset} ==
+               Pacer.Workflow.execute(%ChainWorkflow{y: 5},
+                 only: [:z],
+                 include_dependencies: false
+               )
+    end
+
+    test "an empty list runs nothing" do
+      assert %OnlyWorkflow{} == Pacer.Workflow.execute(OnlyWorkflow, only: [])
+    end
+
+    test "raises when given a field that is not in the workflow" do
+      assert_raise Error, ~r/\[:nope\]/, fn ->
+        Pacer.Workflow.execute(OnlyWorkflow, only: [:b, :nope])
+      end
+    end
+  end
+
   describe "batch field guards" do
     defmodule BatchWorkflowWithGuard do
       use Pacer.Workflow

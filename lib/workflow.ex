@@ -1018,23 +1018,101 @@ defmodule Pacer.Workflow do
   the resolver runs.
 
   Resolvers that have been defined within batches will be executed in parallel.
-  """
-  @spec execute(struct() | module()) :: struct()
-  def execute(workflow) when is_atom(workflow), do: execute(struct(workflow))
 
-  def execute(%module{} = workflow) do
+  ## Options
+
+    * `:only` - a list of field names. When given, only the resolvers for these fields
+      (plus, by default, their transitive dependencies) are executed; every other field
+      keeps its current value (its default, or whatever was set on the struct passed in).
+      Raises `Pacer.Workflow.Error` if any name is not a field of the workflow.
+    * `:include_dependencies` - only applies when `:only` is given. When `true` (the default),
+      the transitive dependencies of the fields in `:only` are executed as well. When `false`,
+      only the listed fields run, so any dependencies they need should already be set on the
+      struct. Defaults to `true`.
+
+  ```elixir
+  Pacer.Workflow.execute(MyWorkflow, only: [:field_b])
+  Pacer.Workflow.execute(%MyWorkflow{field_a: 1}, only: [:field_b], include_dependencies: false)
+  ```
+  """
+  @spec execute(struct() | module(), Keyword.t()) :: struct()
+  def execute(workflow, opts \\ [])
+
+  def execute(workflow, opts) when is_atom(workflow), do: execute(struct(workflow), opts)
+
+  def execute(%module{} = workflow, opts) do
+    only =
+      opts
+      |> Keyword.get(:only)
+      |> validate_only(module)
+      |> maybe_include_dependencies(module, Keyword.get(opts, :include_dependencies, true))
+
     :telemetry.span([:pacer, :workflow], %{workflow: module}, fn ->
       workflow_result =
         :evaluation_order
         |> module.__graph__()
-        |> Enum.reduce(workflow, &execute_vertex/2)
+        |> Enum.reduce(workflow, &execute_vertex(&1, &2, only))
 
       {Map.drop(workflow_result, module.__graph__(:virtual_fields)), %{workflow: module}}
     end)
   end
 
-  defp execute_vertex(vertex, %module{} = workflow) do
-    case module.__graph__(:resolver, vertex) do
+  defp validate_only(nil, _module), do: nil
+
+  defp validate_only(only, module) when is_list(only) do
+    unknown = only -- module.__graph__(:fields)
+
+    unless unknown == [] do
+      raise Error, """
+      Invalid :only option for #{inspect(module)}.
+      Fields that are not defined in the graph: #{inspect(unknown)}
+      """
+    end
+
+    MapSet.new(only)
+  end
+
+  defp maybe_include_dependencies(only, module, true) when not is_nil(only) do
+    collect_dependencies(MapSet.to_list(only), module, only)
+  end
+
+  defp maybe_include_dependencies(only, _module, _include?), do: only
+
+  defp collect_dependencies([], _module, seen), do: seen
+
+  defp collect_dependencies([field | rest], module, seen) do
+    new = field |> field_dependencies(module) |> Enum.reject(&MapSet.member?(seen, &1))
+
+    collect_dependencies(new ++ rest, module, Enum.into(new, seen))
+  end
+
+  # Fields defined inside a batch are not registered under `__graph__(:dependencies, field)`.
+  defp field_dependencies(field, module) do
+    module.__graph__(:dependencies, field)
+  rescue
+    FunctionClauseError -> module.__graph__(:batched_field_dependencies, field)
+  end
+
+  # Narrows a vertex's resolver(s) down to the ones selected by `:only`,
+  # returning `:skip` when nothing is left to run.
+  defp select_resolvers(resolver, _vertex, nil), do: resolver
+
+  defp select_resolvers({:field, _} = resolver, vertex, only) do
+    if MapSet.member?(only, vertex), do: resolver, else: :skip
+  end
+
+  defp select_resolvers({:batch, resolvers}, _vertex, only) do
+    case Enum.filter(resolvers, fn {field, _} -> MapSet.member?(only, field) end) do
+      [] -> :skip
+      selected -> {:batch, selected}
+    end
+  end
+
+  defp execute_vertex(vertex, %module{} = workflow, only) do
+    case select_resolvers(module.__graph__(:resolver, vertex), vertex, only) do
+      :skip ->
+        workflow
+
       {:field, resolver} when is_function(resolver, 1) ->
         metadata = %{field: vertex, workflow: workflow.__struct__}
         resolver_args = Map.take(workflow, [vertex | module.__graph__(:dependencies, vertex)])
