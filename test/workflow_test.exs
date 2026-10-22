@@ -1115,6 +1115,11 @@ defmodule Pacer.WorkflowTest do
                Pacer.Workflow.execute(ChainWorkflow, only: [:z])
     end
 
+    test "with_dependencies/2 returns the fields and their transitive dependencies" do
+      assert [:other, :x, :y, :z] ==
+               ChainWorkflow |> Pacer.Workflow.with_dependencies([:z]) |> Enum.sort()
+    end
+
     test "include_dependencies: false runs only the listed fields" do
       assert %ChainWorkflow{x: 0, y: 5, z: 6, other: :unset} ==
                Pacer.Workflow.execute(%ChainWorkflow{y: 5},
