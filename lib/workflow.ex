@@ -1073,30 +1073,17 @@ defmodule Pacer.Workflow do
   end
 
   defp maybe_include_dependencies(only, module, true) when not is_nil(only) do
-    MapSet.new(with_dependencies(module, MapSet.to_list(only)))
+    collect_dependencies(MapSet.to_list(only), module, only)
   end
 
   defp maybe_include_dependencies(only, _module, _include?), do: only
 
-  @doc """
-  Returns the given fields together with all of their transitive dependencies in `workflow`
-  (a module defined with `Pacer.Workflow`).
+  defp collect_dependencies([], _module, seen), do: seen
 
-  Useful for building a custom `:only` list when the default `:include_dependencies`
-  behavior pulls in too much, for example when a field depends on many fields that
-  you do not want to run.
-  """
-  @spec with_dependencies(module(), [atom()]) :: [atom()]
-  def with_dependencies(workflow, fields) when is_atom(workflow) and is_list(fields) do
-    workflow |> collect_dependencies(fields, MapSet.new(fields)) |> MapSet.to_list()
-  end
-
-  defp collect_dependencies(_module, [], seen), do: seen
-
-  defp collect_dependencies(module, [field | rest], seen) do
+  defp collect_dependencies([field | rest], module, seen) do
     new = field |> field_dependencies(module) |> Enum.reject(&MapSet.member?(seen, &1))
 
-    collect_dependencies(module, new ++ rest, Enum.into(new, seen))
+    collect_dependencies(new ++ rest, module, Enum.into(new, seen))
   end
 
   # Fields defined inside a batch are not registered under `__graph__(:dependencies, field)`.
