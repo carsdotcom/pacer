@@ -44,9 +44,8 @@ Please feel free to create issues on the repo if you notice any bugs or if you w
 When contributing to the codebase, please:
 
 1. Run the test suite locally with `mix test`
-2. Verify Dialyzer still passes with `mix dialyzer`
-3. Run `mix credo --strict`
-4. Make sure your code has been formatted with `mix format`
+2. Run `mix credo --strict`
+3. Make sure your code has been formatted with `mix format`
 
 In your PRs please provide the following detailed information as you see fit, especially for larger proposed changes:
 

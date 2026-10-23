@@ -378,7 +378,6 @@ defmodule Pacer.Workflow do
   alias Pacer.Workflow.Options
 
   require Logger
-  require Pacer.Docs
 
   @example_graph_message """
   Ex.:
