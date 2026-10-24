@@ -72,7 +72,7 @@ defmodule Pacer.Workflow.Options do
       end
       ```
 
-      Then when the `RequestHandler.resolve/1` runs an returns a value of, let's say, `%{response: "important response"}`,
+      Then when the `RequestHandler.resolve/1` runs and returns a value of, let's say, `%{response: "important response"}`,
       your graph struct would look like this:
 
       ```elixir
@@ -103,7 +103,7 @@ defmodule Pacer.Workflow.Options do
       The intent of a virtual field is to allow a spot for intermediate and/or transient calculation steps but
       to avoid the extra memory overhead that would be associated with carrying these values downstream if, for example,
       the map returned from `Pacer.Workflow.execute/1` is stored in a long-lived process state; intermediate or transient
-      values can cause unnecessary memory bloat if they are carried into process state where they are not neeeded.
+      values can cause unnecessary memory bloat if they are carried into process state where they are not needed.
       """
     ]
   ]
